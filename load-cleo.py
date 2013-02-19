@@ -8,6 +8,7 @@ from lxml import etree
 import os.path
 import re
 import unicodedata
+import urllib2
 
 def main(argv=None):
     # argument parser 
@@ -17,6 +18,10 @@ def main(argv=None):
 
     parser.add_argument("dir", help="directory to troll for XML files")
 
+    parser.add_argument('--cleo_url', nargs='?', 
+                     help='output greeked XML (or standard out)',
+                     default='http://localhost:8080/cleo-primer/rest/elements/_')
+    # arguments can come from the command line via argparse or passed in if main is called from other code
     if argv is None:
         argv = parser.parse_args()
 
@@ -24,11 +29,7 @@ def main(argv=None):
     # http://stackoverflow.com/a/541408/1763984
     # http://www.saltycrane.com/blog/2007/03/python-oswalk-example/
 
-    # build a cleo load file
-    output = etree.Element("element-list")
-    doc = etree.ElementTree(output)
     counter = 0
-
     # look for files in the input directory
     for (path, dirs, files) in os.walk(argv.dir):
         for file in files:
@@ -45,10 +46,8 @@ def main(argv=None):
                 # convert from array/nodelist to unicode string
                 name = u" ".join(read_name)
                 title = u" ".join(read_title)
-                # side effect on output xml
-                add_element(output, name, title, counter, 1)
-    # write out xml file
-    doc.write('/home/btingle/python/test.xml', encoding='utf-8', pretty_print=True)
+                # POST to cleo index
+                add_element(name, title, counter, 1, argv.cleo_url)
 
 class MyReadError(Exception):
     def __init__(self, value):
@@ -74,9 +73,21 @@ def read_file(file):
               namespaces={'eac': 'urn:isbn:1-931666-33-4'}), 
            )
 
-def add_element(tree, name, title, id, score):
+# http://stackoverflow.com/a/11801981/1763984
+def post(url, data, contenttype):
+    request = urllib2.Request(url, data)
+    request.add_header('Content-Type', contenttype)
+    response = urllib2.urlopen(request)
+    return response.read()
+
+def postxml(url, elem):
+    data = etree.tostring(elem, encoding='UTF-8')
+    print data
+    return post(url, data, 'application/xml')
+
+def add_element(name, title, id, score, out):
      # create some XML
-     element = etree.SubElement(tree, "element")
+     element = etree.Element("element")
      id_e = etree.SubElement(element, "id")
      id_e.text = unicode(id)
      name_e = etree.SubElement(element, "name")
@@ -93,7 +104,9 @@ def add_element(tree, name, title, id, score):
      for term in clean_string.split():
         term_e = etree.SubElement(element, "term")
         term_e.text = term.lower()
-        
+     # ElementTree has the write/tostring methods
+     postxml(out, element)
+
 # main() idiom for importing into REPL for debugging 
 if __name__ == "__main__":
     sys.exit(main())
