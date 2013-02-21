@@ -1,0 +1,146 @@
+<!DOCTYPE html>  <html> <head>   <title>load-cleo.py</title>   <meta http-equiv="content-type" content="text/html; charset=UTF-8">   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">   <link rel="stylesheet" media="all" href="docco.css" /> </head> <body>   <div id="container">     <div id="background"></div>          <ul class="sections">           <li id="title">             <div class="annotation">                 <h1>load-cleo.py</h1>             </div>         </li>                              <li id="section-1">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-1">&#182;</a>               </div>                                        </div>                          <div class="content"><div class="highlight"><pre><span class="n">undefined</span><span class="c">#!/bin/env python</span>
+<span class="sd">&quot;&quot;&quot; autocomplete using cleo</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">from</span> <span class="nn">lxml</span> <span class="kn">import</span> <span class="n">etree</span>
+<span class="kn">import</span> <span class="nn">os.path</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">unicodedata</span>
+<span class="kn">import</span> <span class="nn">urllib2</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">argv</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span></pre></div></div>                      </li>                              <li id="section-2">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-2">&#182;</a>               </div>                           
+
+<p>argument parser </p>
+
+             </div>                          <div class="content"><div class="highlight"><pre>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+                     <span class="n">description</span><span class="o">=</span><span class="s">&quot;playing around&quot;</span><span class="p">,</span>
+                     <span class="n">epilog</span><span class="o">=</span><span class="s">&quot;...&quot;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;dir&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;directory to troll for XML files&quot;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;--cleo_url&#39;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s">&#39;?&#39;</span><span class="p">,</span> 
+                     <span class="n">help</span><span class="o">=</span><span class="s">&#39;output greeked XML (or standard out)&#39;</span><span class="p">,</span>
+                     <span class="n">default</span><span class="o">=</span><span class="s">&#39;http://localhost:8080/cleo-primer/rest/elements/_&#39;</span><span class="p">)</span></pre></div></div>                      </li>                              <li id="section-3">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-3">&#182;</a>               </div>                           
+
+<p>arguments can come from the command line via argparse or passed in if main is called from other code</p>
+
+             </div>                          <div class="content"><div class="highlight"><pre>    <span class="k">if</span> <span class="n">argv</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">argv</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span></pre></div></div>                      </li>                              <li id="section-4">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-4">&#182;</a>               </div>                           
+
+<p>http://stackoverflow.com/a/12355420/1763984
+http://stackoverflow.com/a/541408/1763984
+http://www.saltycrane.com/blog/2007/03/python-oswalk-example/</p>
+
+             </div>                          <div class="content"><div class="highlight"><pre>    <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span></pre></div></div>                      </li>                              <li id="section-5">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-5">&#182;</a>               </div>                           
+
+<p>look for files in the input directory</p>
+
+             </div>                          <div class="content"><div class="highlight"><pre>    <span class="k">for</span> <span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">dirs</span><span class="p">,</span> <span class="n">files</span><span class="p">)</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">argv</span><span class="o">.</span><span class="n">dir</span><span class="p">):</span>
+        <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span></pre></div></div>                      </li>                              <li id="section-6">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-6">&#182;</a>               </div>                           
+
+<p>limit to XML files by file extension</p>
+
+             </div>                          <div class="content"><div class="highlight"><pre>            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="nb">file</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;.xml&#39;</span><span class="p">:</span>
+                <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="nb">file</span><span class="p">)</span></pre></div></div>                      </li>                              <li id="section-7">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-7">&#182;</a>               </div>                           
+
+<p>http://stackoverflow.com/a/3448733/1763984</p>
+
+             </div>                          <div class="content"><div class="highlight"><pre>                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">read_name</span><span class="p">,</span> <span class="n">read_title</span> <span class="o">=</span> <span class="n">read_file</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+                <span class="k">except</span> <span class="n">MyReadError</span><span class="p">:</span>
+                    <span class="k">break</span></pre></div></div>                      </li>                              <li id="section-8">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-8">&#182;</a>               </div>                           
+
+<p>not sure if the identifier has to be a number</p>
+
+             </div>                          <div class="content"><div class="highlight"><pre>                <span class="n">counter</span> <span class="o">=</span> <span class="n">counter</span> <span class="o">+</span> <span class="mi">1</span></pre></div></div>                      </li>                              <li id="section-9">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-9">&#182;</a>               </div>                           
+
+<p>convert from array/nodelist to unicode string</p>
+
+             </div>                          <div class="content"><div class="highlight"><pre>                <span class="n">name</span> <span class="o">=</span> <span class="s">u&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">read_name</span><span class="p">)</span>
+                <span class="n">title</span> <span class="o">=</span> <span class="s">u&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">read_title</span><span class="p">)</span></pre></div></div>                      </li>                              <li id="section-10">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-10">&#182;</a>               </div>                           
+
+<p>POST to cleo index</p>
+
+             </div>                          <div class="content"><div class="highlight"><pre>                <span class="n">add_element</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">counter</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">argv</span><span class="o">.</span><span class="n">cleo_url</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">MyReadError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+    
+<span class="k">def</span> <span class="nf">read_file</span><span class="p">(</span><span class="nb">file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;read the identity strings from the XML file&quot;&quot;&quot;</span></pre></div></div>                      </li>                              <li id="section-11">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-11">&#182;</a>               </div>                           
+
+<p>need this try/catch because sometime there are bogus files</p>
+
+             </div>                          <div class="content"><div class="highlight"><pre>    <span class="k">try</span><span class="p">:</span>
+        <span class="n">tree</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span></pre></div></div>                      </li>                              <li id="section-12">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-12">&#182;</a>               </div>                           
+
+<p>http://stackoverflow.com/a/730778/1763984</p>
+
+             </div>                          <div class="content"><div class="highlight"><pre>    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span> 
+        <span class="k">raise</span> <span class="n">MyReadError</span><span class="p">(</span><span class="s">&quot;could not open&quot;</span><span class="p">)</span></pre></div></div>                      </li>                              <li id="section-13">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-13">&#182;</a>               </div>                           
+
+<p>could be XML, but not EAC-CPF</p>
+
+             </div>                          <div class="content"><div class="highlight"><pre>    <span class="k">if</span> <span class="n">tree</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&quot;/eac:eac-cpf&quot;</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;eac&#39;</span><span class="p">:</span> <span class="s">&#39;urn:isbn:1-931666-33-4&#39;</span><span class="p">})</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">MyReadError</span><span class="p">(</span><span class="s">&quot;not EAC&quot;</span><span class="p">)</span></pre></div></div>                      </li>                              <li id="section-14">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-14">&#182;</a>               </div>                           
+
+<p>grab all name parts, sloppy to return array/node set?</p>
+
+             </div>                          <div class="content"><div class="highlight"><pre>    <span class="k">return</span> <span class="p">(</span><span class="n">tree</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&quot;/eac:eac-cpf/eac:cpfDescription/eac:identity/eac:nameEntry/eac:part/text()&quot;</span><span class="p">,</span>
+              <span class="n">namespaces</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;eac&#39;</span><span class="p">:</span> <span class="s">&#39;urn:isbn:1-931666-33-4&#39;</span><span class="p">}),</span> 
+            <span class="n">tree</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&quot;/eac:eac-cpf/eac:cpfDescription/eac:identity/eac:entityType/text()&quot;</span><span class="p">,</span>
+              <span class="n">namespaces</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;eac&#39;</span><span class="p">:</span> <span class="s">&#39;urn:isbn:1-931666-33-4&#39;</span><span class="p">}),</span> 
+           <span class="p">)</span></pre></div></div>                      </li>                              <li id="section-15">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-15">&#182;</a>               </div>                           
+
+<p>http://stackoverflow.com/a/11801981/1763984</p>
+
+             </div>                          <div class="content"><div class="highlight"><pre><span class="k">def</span> <span class="nf">post</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">contenttype</span><span class="p">):</span>
+    <span class="n">request</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">Request</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="n">request</span><span class="o">.</span><span class="n">add_header</span><span class="p">(</span><span class="s">&#39;Content-Type&#39;</span><span class="p">,</span> <span class="n">contenttype</span><span class="p">)</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">postxml</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">elem</span><span class="p">):</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">tostring</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s">&#39;UTF-8&#39;</span><span class="p">)</span>
+    <span class="k">print</span> <span class="n">data</span>
+    <span class="k">return</span> <span class="n">post</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="s">&#39;application/xml&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">add_element</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">score</span><span class="p">,</span> <span class="n">out</span><span class="p">):</span></pre></div></div>                      </li>                              <li id="section-16">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-16">&#182;</a>               </div>                           
+
+<p>create some XML</p>
+
+             </div>                          <div class="content"><div class="highlight"><pre>     <span class="n">element</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="s">&quot;element&quot;</span><span class="p">)</span>
+     <span class="n">id_e</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">element</span><span class="p">,</span> <span class="s">&quot;id&quot;</span><span class="p">)</span>
+     <span class="n">id_e</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+     <span class="n">name_e</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">element</span><span class="p">,</span> <span class="s">&quot;name&quot;</span><span class="p">)</span>
+     <span class="n">name_e</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">name</span>
+     <span class="n">title_e</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">element</span><span class="p">,</span> <span class="s">&quot;title&quot;</span><span class="p">)</span>
+     <span class="n">title_e</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">title</span>
+     <span class="n">score_e</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">element</span><span class="p">,</span> <span class="s">&quot;score&quot;</span><span class="p">)</span>
+     <span class="n">score_e</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">score</span><span class="p">)</span></pre></div></div>                      </li>                              <li id="section-17">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-17">&#182;</a>               </div>                           
+
+<p>compile a regex to match all non-word characters (unicode aware)</p>
+
+             </div>                          <div class="content"><div class="highlight"><pre>     <span class="n">cleaner</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">&#39;\W+&#39;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">UNICODE</span><span class="p">)</span></pre></div></div>                      </li>                              <li id="section-18">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-18">&#182;</a>               </div>                           
+
+<p>MARC is decomposed, normalize to compatiable/combined form, or the cleaner regex will match combining characters</p>
+
+             </div>                          <div class="content"><div class="highlight"><pre>     <span class="n">name</span> <span class="o">=</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="s">&#39;NFKC&#39;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+     <span class="n">clean_string</span> <span class="o">=</span> <span class="n">cleaner</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+     <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="n">clean_string</span><span class="o">.</span><span class="n">split</span><span class="p">():</span>
+        <span class="n">term_e</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">SubElement</span><span class="p">(</span><span class="n">element</span><span class="p">,</span> <span class="s">&quot;term&quot;</span><span class="p">)</span>
+        <span class="n">term_e</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">term</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span></pre></div></div>                      </li>                              <li id="section-19">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-19">&#182;</a>               </div>                           
+
+<p>ElementTree has the write/tostring methods</p>
+
+             </div>                          <div class="content"><div class="highlight"><pre>     <span class="n">postxml</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">element</span><span class="p">)</span></pre></div></div>                      </li>                              <li id="section-20">             <div class="annotation">               <div class="pilwrap">                 <a class="pilcrow" href="#section-20">&#182;</a>               </div>                           
+
+<p>main() idiom for importing into REPL for debugging </p>             </div>                          <div class="content"><div class="highlight"><pre><span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+
+</pre></div></div>                      </li>              </ul>    </div> </body> </html> 
